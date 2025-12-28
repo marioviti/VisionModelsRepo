@@ -2,20 +2,15 @@
 
 Wrappers to handle foundational models.
 
-## DTO
+# install as package
 
-Data transfer object unifies format for return values 
+pip install -e .
 
-### Text
+# Examples
 
-### Images
+Check notebook for examples
 
-### Bounding Boxes
+# ModelIO
 
-### Segmentation Polygon masks
-
-### Dense Maps
-
-### FastApi Model Serving Wrapper
-
-### Client API
+Structuting model input and output allowinf modular usage of models in pipelines.
+minimizes glue code.

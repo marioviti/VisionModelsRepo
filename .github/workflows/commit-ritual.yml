@@ -1,0 +1,51 @@
+name: Commit ritual
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUIRED="ALL HAIL THE OMNESSIAH"
+
+          # Determine the commit range to check
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          # Handle the very first push (no 'before' commit)
+          if [[ -z "${BASE}" || "${BASE}" == "0000000000000000000000000000000000000000" ]]; then
+            RANGE="${HEAD}"
+          else
+            RANGE="${BASE}..${HEAD}"
+          fi
+
+          echo "Checking commits in range: ${RANGE}"
+          BAD=0
+
+          while IFS= read -r sha; do
+            msg="$(git log -1 --format=%B "$sha")"
+            if ! grep -qiF "$REQUIRED" <<<"$msg"; then
+              echo "❌ Commit $sha missing phrase: '$REQUIRED'"
+              echo "---- commit message ----"
+              echo "$msg"
+              echo "------------------------"
+              BAD=1
+            fi
+          done < <(git rev-list "$RANGE")
+
+          exit "$BAD"

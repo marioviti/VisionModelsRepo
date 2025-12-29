@@ -20,34 +20,8 @@ class DepthAnythingV3:
         self.model = model
         self.model_id = model_id
 
-    def __call__(self, images: list[Image.Image], export_format="glb", **options) -> list[dict]:
-        prediction = self.predict(images, export_format=export_format, **options)
-        # return list of datum with a prediction in each (list of datum of dict type
-        # prediction.depth: [N,H,W], conf: [N,H,W], intrinsics: [N,3,3], extrinsics: [N,3,4]
-        depth = prediction.depth
-        conf = prediction.conf
-        intrinsics = prediction.intrinsics
-        extrinsics = prediction.extrinsics
-
-        n = int(depth.shape[0])
-        out = []
-        for i in range(n):
-            payload = {
-                    "kind": "depth_anything_v3",
-                    "units": "m",
-                    "index": i,
-                    "model": self.model_id,
-                    "conf" : conf[i] if conf is not None else None,
-                    "depth": depth[i],
-                    "intrinsics": intrinsics[i] if intrinsics is not None else None,
-                    "extrinsics": extrinsics[i] if extrinsics is not None else None,
-                }
-            out.append(payload)
-
-        return out
-
     @torch.inference_mode()
-    def predict(self, images: list[Image.Image], export_format="glb", **options):
+    def __call__(self, images: list[Image.Image], export_format="glb", **options):
         """
         Estimate depth from an image.
 

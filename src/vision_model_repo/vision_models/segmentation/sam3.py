@@ -1,7 +1,7 @@
 import torch
 from transformers import Sam3Processor, Sam3Model
 from PIL import Image
-from typing import List, Union, Tuple, Dict, Any
+from typing import List, Union, Tuple, Dict, Any, Optional
 
 TextBatch = Union[List[str], List[List[str]]]
 
@@ -55,10 +55,11 @@ class Sam3:
 
         return flat_images, flat_texts, index_map
 
-    def _resolve_overlaps(self, grouped_results: List[List[Dict[str, Any]]], size: Tuple[int, int]):
+    def _resolve_overlaps(self, grouped_results: List[List[Dict[str, Any]]], size: Tuple[int, int], priors: Optional[List[float]] = None):
         """
         Resolves overlaps for a single image's results using pixel-wise max score.
         grouped_results: List of dicts for one image, each having 'result' with 'masks' (N, H, W) and 'iou_scores' (N,)
+        priors: Optional list of weights per prompt index.
         """
         # Collect all instances
         all_masks = []
@@ -74,6 +75,10 @@ class Sam3:
              # ensure on CPU
              masks = masks.detach().cpu()
              scores = scores.detach().cpu()
+             
+             # Apply prior if available
+             if priors is not None and p_idx < len(priors):
+                 scores = scores * priors[p_idx]
              
              for i in range(masks.shape[0]):
                  all_masks.append(masks[i])
@@ -143,7 +148,7 @@ class Sam3:
         texts: TextBatch,
         threshold: float = 0.5,
         mask_threshold: float = 0.5,
-        resolve_overlaps: bool = False,
+        resolve_overlaps: Union[bool, List[float]] = False,
     ) -> List[List[Dict[str, Any]]]:
 
         flat_images, flat_texts, index_map = self._expand_pairs(images, texts)
@@ -172,6 +177,7 @@ class Sam3:
             grouped[bi].append({"prompt_index": pi, "prompt": prompt, "result": res})
 
         if resolve_overlaps:
+            priors = resolve_overlaps if isinstance(resolve_overlaps, list) else None
             for bi in range(len(images)):
                 if not grouped[bi]: continue
                 # We assume all images in batch have same size if processed together, 
@@ -180,6 +186,6 @@ class Sam3:
                 
                 # Check first valid result
                 h, w = target_sizes[bi]
-                self._resolve_overlaps(grouped[bi], (h, w))
+                self._resolve_overlaps(grouped[bi], (h, w), priors=priors)
 
         return grouped

@@ -136,6 +136,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+*.env.local
 .envrc
 .venv
 env/
@@ -143,6 +145,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# HuggingFace cache (optionally ignore if using custom location)
+# content/hf_cache/
 
 # Spyder project settings
 .spyderproject

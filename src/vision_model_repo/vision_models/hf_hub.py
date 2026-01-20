@@ -3,6 +3,17 @@ import sys
 import logging
 import importlib
 
+from huggingface_hub import hf_hub_download
+
+def download_sam3d_pipeline(root_folder=".", hf_token=None, reload_libs=True):
+    download_file_from_hf_hub('facebook/sam-3d-objects', 'pipeline.yaml', root_folder=root_folder, hf_token=hf_token, reload_libs=reload_libs)
+
+def download_file_from_hf_hub(path_to_repo, file_path_dest, root_folder=".", hf_token=None, reload_libs=True):
+    set_hf_content_environment(root_folder=root_folder, hf_token=hf_token, reload_libs=reload_libs)
+    path = hf_hub_download(repo_id=path_to_repo, filename=file_path_dest)
+    logging.info(f'downloaded {path_to_repo} : {file_path_dest} path {path}')
+    return path
+
 def set_hf_content_environment(root_folder=".", hf_token=None, reload_libs=True):
     # 1. Set env vars
     if hf_token is not None:

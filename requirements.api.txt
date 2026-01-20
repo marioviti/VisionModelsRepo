@@ -1,0 +1,19 @@
+# API Server Requirements
+# Install with: pip install -r requirements.api.txt
+
+# Core API Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# Image Processing
+Pillow>=10.0.0
+requests>=2.31.0
+
+# Vision Models (from main package)
+torch>=2.0.0
+transformers>=4.35.0
+
+# Optional: For production deployment
+gunicorn>=21.2.0
+python-multipart>=0.0.6

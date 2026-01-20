@@ -1,7 +1,10 @@
+
 import torch
 from transformers import Sam3Processor, Sam3Model
 from PIL import Image
 from typing import List, Union, Tuple, Dict, Any, Optional
+
+from .utils import dense_to_cvat_rle, dense_to_polygons
 
 TextBatch = Union[List[str], List[List[str]]]
 
@@ -149,6 +152,7 @@ class Sam3:
         threshold: float = 0.5,
         mask_threshold: float = 0.5,
         resolve_overlaps: Union[bool, List[float]] = False,
+        output_format: str = "dense", # "dense", "rle", "polygons"
     ) -> List[List[Dict[str, Any]]]:
 
         flat_images, flat_texts, index_map = self._expand_pairs(images, texts)
@@ -187,5 +191,43 @@ class Sam3:
                 # Check first valid result
                 h, w = target_sizes[bi]
                 self._resolve_overlaps(grouped[bi], (h, w), priors=priors)
+        
+        if output_format == "dense":
+            return grouped
+
+        # Convert to requested format
+        for image_res in grouped:
+            for entry in image_res:
+                res = entry["result"]
+                masks = res.get("masks") # Tensor(N, H, W)
+                
+                if masks is None: 
+                    continue
+                
+                # Handle empty case
+                if masks.numel() == 0:
+                    converted_masks = []
+                else:
+                    masks_np = masks.detach().cpu().numpy()
+                    masks_bool = (masks_np > 0.5) # ensure boolean
+                    
+                    converted_masks = []
+                    for i in range(masks_bool.shape[0]):
+                        m = masks_bool[i]
+                        if output_format == "rle":
+                            converted_masks.append(dense_to_cvat_rle(m))
+                        elif output_format == "polygons":
+                            converted_masks.append(dense_to_polygons(m))
+                        else:
+                            raise ValueError(f"Unknown output_format='{output_format}'. Supported: dense, rle, polygons")
+                
+                # Assign to new key and remove old
+                if output_format == "rle":
+                    res["masks_rle"] = converted_masks
+                elif output_format == "polygons":
+                    res["masks_polygon"] = converted_masks
+                
+                if "masks" in res:
+                    del res["masks"]
 
         return grouped
